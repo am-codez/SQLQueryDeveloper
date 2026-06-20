@@ -1,0 +1,30 @@
+{
+  "name": "sql-query-developer",
+  "version": "2.0.0",
+  "description": "Web-based SQL query builder with a polished UI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --verbose",
+    "test:watch": "node --experimental-vm-modules node_modules/.bin/jest --watch --verbose",
+    "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage",
+    "seed": "node seed.js"
+  },
+  "keywords": [
+    "sql",
+    "query-builder",
+    "database",
+    "web-app"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^12.10.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}

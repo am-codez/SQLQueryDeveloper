@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQL Query Developer</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">SQL Query Developer</div>
+    <div class="nav-status">
+      <span id="connectionStatus" class="status-dot disconnected"></span>
+      <span id="connectionLabel">Not connected</span>
+    </div>
+  </nav>
+
+  <div class="container">
+    <!-- Connection Panel -->
+    <section class="panel" id="connectionPanel">
+      <div class="panel-header">
+        <h2>Database Connection</h2>
+        <button class="btn-sm" id="toggleConnectionBtn" onclick="toggleConnectionForm()">Configure</button>
+      </div>
+      <div class="panel-body hidden" id="connectionForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="databaseFile">SQLite Database File</label>
+            <div class="file-input-row">
+              <input type="text" id="databaseFile" placeholder="./mydatabase.db" value="./chinook.db">
+              <button class="btn-sm" onclick="document.getElementById('filePicker').click()">Browse</button>
+              <input type="file" id="filePicker" accept=".db,.sqlite,.sqlite3" style="display:none" onchange="onFilePicked(event)">
+            </div>
+            <span class="hint">Creates a new file if it doesn't exist.</span>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn" id="connectBtn" onclick="connect()">Connect</button>
+          <button class="btn btn-secondary hidden" id="disconnectBtn" onclick="disconnect()">Disconnect</button>
+        </div>
+        <div id="connectionMessage" class="message"></div>
+      </div>
+    </section>
+
+    <!-- Query Builder -->
+    <section class="panel" id="queryPanel">
+      <div class="panel-header">
+        <h2>Query Builder</h2>
+        <div class="panel-actions">
+          <button class="btn-sm" onclick="resetQuery()">Reset</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="builder-grid">
+          <!-- Tables / Schema -->
+          <div class="builder-section">
+            <h3>Schema</h3>
+            <div id="schemaArea">
+              <p class="hint">Connect to a database to browse tables.</p>
+            </div>
+          </div>
+
+          <!-- Query construction -->
+          <div class="builder-section">
+            <h3>Query Steps</h3>
+
+            <!-- TOP -->
+            <details class="step">
+              <summary>TOP / LIMIT</summary>
+              <div class="step-body">
+                <label>Limit results to:
+                  <input type="number" id="topInput" min="1" max="10000000" placeholder="e.g. 100">
+                </label>
+              </div>
+            </details>
+
+            <!-- FROM -->
+            <details class="step">
+              <summary>FROM Table</summary>
+              <div class="step-body">
+                <label>Table:
+                  <select id="fromTableSelect" onchange="onFromTableChange()">
+                    <option value="">-- Select --</option>
+                  </select>
+                </label>
+                <label>Alias:
+                  <input type="text" id="fromAlias" placeholder="e.g. t1" maxlength="5">
+                </label>
+              </div>
+            </details>
+
+            <!-- JOIN -->
+            <details class="step">
+              <summary>JOIN</summary>
+              <div class="step-body">
+                <div id="joinsContainer">
+                  <div class="join-row">
+                    <select class="join-type">
+                      <option>JOIN</option><option>INNER JOIN</option><option>LEFT JOIN</option>
+                      <option>RIGHT JOIN</option><option>FULL OUTER JOIN</option><option>CROSS JOIN</option>
+                    </select>
+                    <select class="join-table">
+                      <option value="">-- Table --</option>
+                    </select>
+                    <input class="join-alias" placeholder="Alias" maxlength="5">
+                    <input class="join-on" placeholder="ON condition (e.g. t1.id = t2.id)">
+                    <button class="btn-sm btn-danger" onclick="this.closest('.join-row').remove()">X</button>
+                  </div>
+                </div>
+                <button class="btn-sm" onclick="addJoinRow()">+ Add Join</button>
+              </div>
+            </details>
+
+            <!-- SELECT columns -->
+            <details class="step">
+              <summary>SELECT Columns</summary>
+              <div class="step-body">
+                <div id="columnsContainer">
+                  <div class="column-row">
+                    <input class="column-expr" placeholder="Column name or expression" value="*">
+                    <input class="column-alias" placeholder="Alias (optional)" maxlength="30">
+                    <button class="btn-sm btn-danger" onclick="this.closest('.column-row').remove()">X</button>
+                  </div>
+                </div>
+                <button class="btn-sm" onclick="addColumnRow()">+ Add Column</button>
+                <label class="checkbox-label"><input type="checkbox" id="selectAllCheck" onchange="toggleSelectAll()"> Select all columns</label>
+              </div>
+            </details>
+
+            <!-- WHERE -->
+            <details class="step">
+              <summary>WHERE</summary>
+              <div class="step-body">
+                <div id="whereContainer">
+                  <div class="where-row">
+                    <select class="where-column"><option value="">-- Column --</option></select>
+                    <select class="where-op">
+                      <option>=</option><option><</option><option><=</option><option>></option><option>>=</option>
+                      <option><></option><option>LIKE</option><option>NOT LIKE</option><option>IN</option><option>NOT IN</option>
+                      <option>BETWEEN</option><option>NOT BETWEEN</option><option>IS NULL</option><option>IS NOT NULL</option>
+                    </select>
+                    <input class="where-value" placeholder="Value">
+                    <select class="where-logic">
+                      <option value="AND">AND</option><option value="OR">OR</option>
+                    </select>
+                    <button class="btn-sm btn-danger" onclick="removeWhere(this)">X</button>
+                  </div>
+                </div>
+                <button class="btn-sm" onclick="addWhereRow()">+ Add Condition</button>
+              </div>
+            </details>
+
+            <!-- GROUP BY -->
+            <details class="step">
+              <summary>GROUP BY</summary>
+              <div class="step-body">
+                <label>Column:
+                  <select id="groupColumn" multiple></select>
+                </label>
+                <label>Order:
+                  <select id="groupOrder">
+                    <option>ASC</option><option>DESC</option>
+                  </select>
+                </label>
+              </div>
+            </details>
+
+            <!-- HAVING -->
+            <details class="step">
+              <summary>HAVING</summary>
+              <div class="step-body">
+                <label>Column:
+                  <select id="havingColumn"><option value="">--</option></select>
+                </label>
+                <label>Operator:
+                  <select id="havingOp">
+                    <option>=</option><option><</option><option><=</option><option>></option><option>>=</option><option><></option>
+                  </select>
+                </label>
+                <label>Value:
+                  <input type="number" id="havingValue">
+                </label>
+              </div>
+            </details>
+
+            <!-- ORDER BY -->
+            <details class="step">
+              <summary>ORDER BY</summary>
+              <div class="step-body">
+                <label>Columns:
+                  <select id="orderColumn" multiple></select>
+                </label>
+                <label>Direction:
+                  <select id="orderDirection">
+                    <option>ASC</option><option>DESC</option>
+                  </select>
+                </label>
+              </div>
+            </details>
+
+            <!-- UNION -->
+            <details class="step">
+              <summary>UNION</summary>
+              <div class="step-body">
+                <label>Type:
+                  <select id="unionType">
+                    <option>UNION</option><option>UNION ALL</option>
+                  </select>
+                </label>
+                <label>Table:
+                  <select id="unionTableSelect"><option value="">-- Select --</option></select>
+                </label>
+                <button class="btn-sm" onclick="buildQuery()">Build UNION Query</button>
+              </div>
+            </details>
+
+            <button class="btn btn-primary" onclick="buildQuery()" style="margin-top:1rem;width:100%">Build SQL</button>
+          </div>
+
+          <!-- SQL output -->
+          <div class="builder-section">
+            <h3>Generated SQL</h3>
+            <pre id="sqlOutput" class="sql-output"><code>-- Your SQL will appear here --</code></pre>
+            <div class="form-actions">
+              <button class="btn btn-sm" onclick="copySQL()">Copy</button>
+              <button class="btn btn-sm btn-secondary" id="executeBtn" onclick="executeSQL()">Execute</button>
+            </div>
+            <div id="queryResult" class="results hidden">
+              <h4>Results</h4>
+              <div id="resultTable"></div>
+              <div id="resultMessage"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
